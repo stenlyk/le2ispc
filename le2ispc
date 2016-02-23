@@ -201,10 +201,10 @@ echo "- Run Let's Encrypt Tool\n";
 $webroot = "/var/www/";
 if ($server['type'] == 'nginx') 
 {
-    $webroot = $domainInfo['document_root'];
+    $webroot = $domainInfo['document_root'].'/web';
     if(isset($aliasInfo))
     {
-        if(!empty($aliasInfo['redirect_path']) && strrpos($aliasInfo['redirect_path'], 'http', -strlen($haystack)) === false)
+        if(!empty($aliasInfo['redirect_path']) && strrpos($aliasInfo['redirect_path'], 'http', -strlen($aliasInfo['redirect_path'])) === false)
         {
             $domainInfo['document_root'] .= $aliasInfo['redirect_path'];
         }
