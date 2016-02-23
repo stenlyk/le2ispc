@@ -144,11 +144,14 @@ if ( $server['type'] == 'apache' ) {
         sleep(5);
     }
 } elseif ($server['type'] == 'nginx' ) {
-    if (strpos($domainInfo['nginx_directives'], '<LocationMatch "/.well-known/acme-challenge/*">') === false) {
+
+    if (strpos($domainInfo['nginx_directives'], '/.well-known') === false) {
         # No acme-challenge rule detected, so lets add it
         $txt = '
-            location ~ /.well-known/acme-challenge/(.*) {
+            location /.well-known {
+                allow all;
                 default_type text/plain;
+                alias /usr/share/.well-known;
             }
             ' . $domainInfo['nginx_directives'];
         $client = newSoapConnection ($server);
@@ -182,6 +185,7 @@ if( $server['type'] == 'apache' && $server["modules"] != "") {
 # Run letsencrypt to create the certs;  --agree-eula is on current git (no Beta Testing) not required
 echo "- Run Let's Encrypt Tool\n";
 $webroot = "/var/www/";
+if ($server['type'] == 'nginx') $webroot = "/usr/share/";
 $command = "$letsencrypt --text --agree-tos --renew-by-default --rsa-key-size 4096 --email '$email' $domains -a webroot --webroot-path " . $webroot . " certonly";
 if ($dry_run) {
     echo $command;
