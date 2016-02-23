@@ -67,8 +67,23 @@ $stmt = $db->prepare("SELECT * FROM `web_domain` WHERE `domain` LIKE ? AND `type
 $stmt->execute(array($domain));
 $count = $stmt->rowCount();
 if ($count != 1) {
-    echo "Domain name '$domain' could not be found in the ISPC DB. Please try again.";
-    exit;
+    // In case you use alias as primary doamin
+    echo "- Query MySQL whether it's a alias.\n";
+    $aliasStmt = $db->prepare("SELECT * FROM `web_domain` WHERE `domain` LIKE ? AND `type` LIKE 'alias%'");
+    $aliasStmt->execute(array($domain));
+    $count = $aliasStmt->rowCount();
+    if ($count != 1) {
+        echo "Domain name '$domain' could not be found in the ISPC DB. Please try again.";
+        exit;
+    }
+    $row = $aliasStmt->fetchAll(PDO::FETCH_ASSOC);
+    $aliasInfo = $row[0];
+
+    echo "- Query MySQL info for domain from alias.\n";
+    // this part is for NGINX only to create web root in specific web root dirrectory
+    $stmt = $db->prepare("SELECT * FROM `web_domain` WHERE `domain_id` = ?");
+    $stmt->execute(array($aliasInfo['parent_domain_id']));
+
 }
 $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $domainInfo = $row[0];
@@ -151,7 +166,6 @@ if ( $server['type'] == 'apache' ) {
             location /.well-known {
                 allow all;
                 default_type text/plain;
-                alias /usr/share/.well-known;
             }
             ' . $domainInfo['nginx_directives'];
         $client = newSoapConnection ($server);
@@ -185,7 +199,17 @@ if( $server['type'] == 'apache' && $server["modules"] != "") {
 # Run letsencrypt to create the certs;  --agree-eula is on current git (no Beta Testing) not required
 echo "- Run Let's Encrypt Tool\n";
 $webroot = "/var/www/";
-if ($server['type'] == 'nginx') $webroot = "/usr/share/";
+if ($server['type'] == 'nginx') 
+{
+    $webroot = $domainInfo['document_root'];
+    if(isset($aliasInfo))
+    {
+        if(!empty($aliasInfo['redirect_path']) && strrpos($aliasInfo['redirect_path'], 'http', -strlen($haystack)) === false)
+        {
+            $domainInfo['document_root'] .= $aliasInfo['redirect_path'];
+        }
+    }
+} 
 $command = "$letsencrypt --text --agree-tos --renew-by-default --rsa-key-size 4096 --email '$email' $domains -a webroot --webroot-path " . $webroot . " certonly";
 if ($dry_run) {
     echo $command;
