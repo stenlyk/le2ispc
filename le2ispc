@@ -159,25 +159,21 @@ if ( $server['type'] == 'apache' ) {
         sleep(5);
     }
 } elseif ($server['type'] == 'nginx' ) {
-
-    if (strpos($domainInfo['nginx_directives'], '/.well-known') === false) {
-        # No acme-challenge rule detected, so lets add it
-        $txt = '
-            location /.well-known {
-                allow all;
-                default_type text/plain;
-            }
-            ' . $domainInfo['nginx_directives'];
-        $client = newSoapConnection ($server);
-        $params = loadDomainData ($server, $client, $domain_id);
-        # Update params array with new directives
-        $params['nginx_directives'] = $txt;
-        # Store altered data in ISPC
-        saveDomainData ($server, $client, $server_id, $domain_id, $params);
-        closeSoapConnection ($server, $client);
-        # ISPC cron runs every minute, so sleep for 60 seconds.... annoying but only required if directives haven't been added yet for acme-challenge
-        sleep(60);
-    }
+# copy file from /usr/local/ispconfig/server/conf/nginx_vhost.conf.master to /usr/local/ispconfig/server/conf-custom/nginx_vhost.conf.master
+# Edit and put this line before ## Disable .htaccess and other hidden files
+#   #configure custom nginx template
+#   # Enable letsencrypt
+#   location ~ /.well-known {
+#       allow all;
+#       default_type text/plain;
+#   }
+#   
+#   ## Disable .htaccess and other hidden files
+#   location ~ /\. {
+#       deny all;
+#       access_log off;
+#       log_not_found off;
+#   }
 } else {
     echo "No valid server setting in the configuration. Please fix.";
     exit;
