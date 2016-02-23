@@ -204,9 +204,10 @@ if ($server['type'] == 'nginx')
     $webroot = $domainInfo['document_root'].'/web';
     if(isset($aliasInfo))
     {
+        echo "Test alias redirect path";
         if(!empty($aliasInfo['redirect_path']) && strrpos($aliasInfo['redirect_path'], 'http', -strlen($aliasInfo['redirect_path'])) === false)
         {
-            $domainInfo['document_root'] .= $aliasInfo['redirect_path'];
+            $webroot .= $aliasInfo['redirect_path'];
         }
     }
 } 
