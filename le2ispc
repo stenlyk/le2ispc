@@ -12,6 +12,7 @@ $confVersion  = "2016-01-14-1";
 
 # Include the le2ispc config
 require_once('/root/.le2ispc/le2ispc.conf.php');
+require_once('/root/.le2ispc/subdomain.conf.php');
 # Check if the versions are identical
 if ( $version != $confVersion ) {
     echo "The config file was altered.
@@ -49,11 +50,9 @@ if($arg == '-n' || $arg == '--dry-run') {
 
 
 # Get the domain
-echo "- Get the domain name(s): $arg $argv.\n";
+echo "- Get the domain name(s): $arg.\n";
 $domain = $arg;
-$subdomains = $argv;
-
-
+$subdomains = isset($subdomainsConf[$domain]) ? $subdomainsConf[$domain] : array(); //$argv; // include from subdomain.conf.php - it dosent fork for renewal
 
 # Query the MySQL DB Directly whether $domain is a vhost
 echo "- Query MySQL whether it's a vhost.\n";
@@ -67,12 +66,12 @@ $stmt = $db->prepare("SELECT * FROM `web_domain` WHERE `domain` LIKE ? AND `type
 $stmt->execute(array($domain));
 $count = $stmt->rowCount();
 if ($count != 1) {
-    // In case you use alias as primary doamin
+    // In case you use alias as primary domain
     echo "- Query MySQL whether it's a alias.\n";
     $aliasStmt = $db->prepare("SELECT * FROM `web_domain` WHERE `domain` LIKE ? AND `type` LIKE 'alias%'");
     $aliasStmt->execute(array($domain));
     $count = $aliasStmt->rowCount();
-    if ($count != 1) {
+    if ($count == 0) {
         echo "Domain name '$domain' could not be found in the ISPC DB. Please try again.";
         exit;
     }
@@ -101,20 +100,16 @@ if (in_array($domainInfo['subdomain'], array('www','*')) && !in_array($www_subdo
     $domains = "-d '$domain'";
 }
 
-
-
 # Add subdomains to domain list
 foreach ($subdomains as $subdomain) {
     $domains .= " -d '$subdomain'";
 }
 
-
-
 # Make sure webroot authentication works for both
 echo "- Prepare Server for webroot authentication.\n";
 # https://letsencrypt.readthedocs.org/en/latest/api/plugins/webroot.html?highlight=webroot#module-letsencrypt.plugins.webroot
 if ( $server['type'] == 'apache' ) {
-    # Create dirs for challenge
+    # Create dirs for acme-challenge
     @mkdir("/var/www/.well-known/acme-challenge", 0777, true);
     @chmod("/var/www/.well-known", 0777);
     @chmod("/var/www/.well-known/acme-challenge", 0777);
